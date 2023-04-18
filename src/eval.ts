@@ -1,6 +1,16 @@
 import { SExpr } from "./parse";
 
-export type Value = ["nil"] | ["symbol", string] | ["number", number] | ["bool", boolean] | ["built-in-func", (expr: SExpr, env: Env) => Value];
+type VNil = ["nil"];
+type VSymbol = ["symbol", string];
+type VNumber = ["number", number];
+type VBool = ["bool", boolean];
+type VBuiltInFunc = ["built-in-func", (expr: SExpr, env: Env) => Value];
+export type Value =
+    | VNil
+    | VSymbol
+    | VNumber
+    | VBool
+    | VBuiltInFunc;
 
 export const displayValue = (value: Value): string => {
     switch (value[0]) {
@@ -129,22 +139,22 @@ const getEvalArithmeticOperation = (
     name: string,
     reducer: (acc: number, num: number) => number,
     unitOrUniop: number | ((num: number) => number)
-): Value => {
+): VBuiltInFunc => {
     const calculator = getCalcArithmeticOperation(name, reducer, unitOrUniop);
-    const evaluator = (expr: SExpr, env: Env): Value => {
+    const evaluator = (expr: SExpr, env: Env): VNumber => {
         const args = evalArgs(expr, env);
         const numbers = mapToNumbers(args);
 
         return ["number", calculator(numbers)];
     };
-
+ 
     return ["built-in-func", evaluator];
 };
 
-const evalAdd: Value = getEvalArithmeticOperation("+", (acc, num) => acc + num, 0.0);
-const evalSub: Value = getEvalArithmeticOperation("-", (acc, num) => acc - num, (num) => -num);
-const evalMul: Value = getEvalArithmeticOperation("*", (acc, num) => acc * num, 1.0);
-const evalDiv: Value = getEvalArithmeticOperation("/", (acc, num) => acc / num, (num) => 1.0 / num);
+const evalAdd = getEvalArithmeticOperation("+", (acc, num) => acc + num, 0.0);
+const evalSub = getEvalArithmeticOperation("-", (acc, num) => acc - num, (num) => -num);
+const evalMul = getEvalArithmeticOperation("*", (acc, num) => acc * num, 1.0);
+const evalDiv = getEvalArithmeticOperation("/", (acc, num) => acc / num, (num) => 1.0 / num);
 
 export const initialEnv = (): Env => {
     const env = new Env();

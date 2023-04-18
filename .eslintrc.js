@@ -1,3 +1,4 @@
+// eslint-disable-next-line no-undef
 module.exports = {
     "env": {
         "browser": true,
@@ -38,6 +39,10 @@ module.exports = {
         "no-constant-condition": [
             "error",
             { "checkLoops": false },
+        ],
+        "max-len": [
+            "error",
+            { code: 120 }
         ]
     }
 };
