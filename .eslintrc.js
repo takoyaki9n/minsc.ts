@@ -19,30 +19,11 @@ module.exports = {
         "@typescript-eslint"
     ],
     "rules": {
-        "indent": [
-            "error",
-            4,
-            { "SwitchCase": 1 },
-        ],
-        "linebreak-style": [
-            "error",
-            "unix"
-        ],
-        "quotes": [
-            "error",
-            "double"
-        ],
-        "semi": [
-            "error",
-            "always"
-        ],
-        "no-constant-condition": [
-            "error",
-            { "checkLoops": false },
-        ],
-        "max-len": [
-            "error",
-            { code: 120 }
-        ]
+        "indent": ["error", 4, { "SwitchCase": 1 }],
+        "linebreak-style": ["error", "unix"],
+        "quotes": ["error", "double"],
+        "semi": ["error", "always"],
+        "no-constant-condition": ["error", { "checkLoops": false }],
+        "max-len": ["error", { code: 120 }],
     }
 };
