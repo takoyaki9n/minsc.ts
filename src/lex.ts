@@ -22,11 +22,11 @@ const getToken = (input: string): [string, string] => {
         }
     }
 
-    return [trimmed, ''];
+    return [trimmed, ""];
 };
 
 const lex = (program: string): string[] => {
-    let tokens: string[] = [];
+    const tokens: string[] = [];
 
     let rest = program;
     while (rest.length > 0) {

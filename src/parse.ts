@@ -8,10 +8,11 @@ const parseList = (tokens: string[]): SExpr => {
         case ")":
             tokens.shift();
             return null;
-        default:
+        default: {
             const car = parseSExpression(tokens);
             const cdr = parseList(tokens);
             return [car, cdr];
+        }
     }
 };
 
@@ -30,7 +31,7 @@ const parseSExpression = (tokens: string[]): SExpr => {
 };
 
 const parse = (tokens: string[]): SExpr => {
-    let expr = parseSExpression(tokens);
+    const expr = parseSExpression(tokens);
     if (tokens.length == 0) {
         return expr;
     } else {

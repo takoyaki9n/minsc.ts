@@ -3,7 +3,6 @@ import { SExpr } from "./parse";
 export type Value = ["nil"] | ["symbol", string] | ["number", number] | ["bool", boolean] | ["built-in-func", (expr: SExpr, env: Env) => Value];
 
 export const displayValue = (value: Value): string => {
-    const [label,] = value;
     switch (value[0]) {
         case "nil":
             return "Nil";
@@ -150,7 +149,7 @@ const evalDiv: Value = getEvalArithmeticOperation("/", (acc, num) => acc / num, 
 export const initialEnv = (): Env => {
     const env = new Env();
     env.set("+", evalAdd);
-    env.set("-", evalSub)
+    env.set("-", evalSub);
     env.set("*", evalMul);
     env.set("/", evalDiv);
 
