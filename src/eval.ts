@@ -70,16 +70,43 @@ const evalAtom = (token: string, env: Env): Value => {
 };
 
 const evalArgs = (expr: SExpr, env: Env, args: Value[] = []): Value[] => {
-    if (typeof expr === "string") {
-        throw new Error(`A list is expected but got: ${expr}`);
-    } else if (expr === null) {
+    if (expr === null) {
         return args ?? [];
-    } else {
-        const [car, cdr] = expr;
-        args.push(evalSExpression(car, env));
-
-        return evalArgs(cdr, env, args);
+    } else if (typeof expr === "string") {
+        throw new Error(`A list is expected but got: ${expr}`);
     }
+
+    const [car, cdr] = expr;
+    args.push(evalSExpression(car, env));
+
+    return evalArgs(cdr, env, args);
+};
+
+const toList = (expr: SExpr, list: SExpr[] = []): SExpr[] => {
+    if (expr === null) {
+        return list;
+    } else if (typeof expr === "string") {
+        throw new Error(`Expression is imcomplete list: ${expr}`);
+    }
+
+    const [car, cdr] = expr;
+    list.push(car);
+
+    return toList(cdr, list);
+};
+
+const evalIf = (expr: SExpr, env: Env): Value => {
+    const [testExpr, thenExpr, elseExpr, ...rest] = toList(expr);
+    if (rest.length > 0) {
+        throw new Error(`Malformed if: ${rest}`);
+    }
+
+    const testValue = evalSExpression(testExpr, env);
+    if(testValue[0] !== "bool") {
+        throw new Error(`Bool is expected but got: ${displayValue(testValue)}`);
+    }
+
+    return evalSExpression(testValue[1]? thenExpr: elseExpr, env);
 };
 
 const evalApply = (car: SExpr, cdr: SExpr, env: Env): Value => {
@@ -98,13 +125,13 @@ const evalSExpression = (expr: SExpr, env: Env): Value => {
         return evalAtom(expr, env);
     } else {
         const [car, cdr] = expr;
-        if (car === "if") {
-            throw new Error("Not yet implemented: if");
-        } else {
-            return evalApply(car, cdr, env);
+        switch (car) {
+            case "if":
+                return evalIf(cdr, env);
+            default:
+                return evalApply(car, cdr, env);
         }
     }
-
 };
 
 const mapToNumbers = (args: Value[]): number[] =>
@@ -147,7 +174,7 @@ const getEvalArithmeticOperation = (
 
         return ["number", calculator(numbers)];
     };
- 
+
     return ["built-in-func", evaluator];
 };
 
@@ -155,7 +182,6 @@ const evalAdd = getEvalArithmeticOperation("+", (acc, num) => acc + num, 0.0);
 const evalSub = getEvalArithmeticOperation("-", (acc, num) => acc - num, (num) => -num);
 const evalMul = getEvalArithmeticOperation("*", (acc, num) => acc * num, 1.0);
 const evalDiv = getEvalArithmeticOperation("/", (acc, num) => acc / num, (num) => 1.0 / num);
-
 export const initialEnv = (): Env => {
     const env = new Env();
     env.set("+", evalAdd);
