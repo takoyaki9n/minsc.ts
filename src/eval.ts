@@ -1,16 +1,17 @@
+import { evalAdd, evalDiv, evalEq, evalGe, evalGt, evalLe, evalLt, evalMul, evalSub } from "./lib/number";
 import { SExpr } from "./parse";
 
-type VNil = ["nil"];
-type VSymbol = ["symbol", string];
-type VNumber = ["number", number];
-type VBool = ["bool", boolean];
-type VBuiltInFunc = ["built-in-func", (expr: SExpr, env: Env) => Value];
+export type VNil = ["nil"];
+export type VSymbol = ["symbol", string];
+export type VNumber = ["number", number];
+export type VBool = ["bool", boolean];
+export type VBuiltInProc = ["built-in-proc", (args: Value[]) => Value];
 export type Value =
     | VNil
     | VSymbol
     | VNumber
     | VBool
-    | VBuiltInFunc;
+    | VBuiltInProc;
 
 export const displayValue = (value: Value): string => {
     switch (value[0]) {
@@ -22,8 +23,8 @@ export const displayValue = (value: Value): string => {
             return `${value[1]}`;
         case "bool":
             return value[1] ? "#t" : "#f";
-        case "built-in-func":
-            return "<BuiltInFunction>";
+        case "built-in-proc":
+            return "<Built-In Procedure>";
         default:
             return `Invalid value: ${value}`;
     }
@@ -111,8 +112,10 @@ const evalIf = (expr: SExpr, env: Env): Value => {
 
 const evalApply = (car: SExpr, cdr: SExpr, env: Env): Value => {
     const value = evalSExpression(car, env);
-    if (value[0] === "built-in-func") {
-        return value[1](cdr, env);
+    if (value[0] === "built-in-proc") {
+        const args = evalArgs(cdr, env);
+
+        return value[1](args);
     }
 
     throw new Error(`Invalid application: ${displayValue(value)}`);
@@ -134,54 +137,6 @@ const evalSExpression = (expr: SExpr, env: Env): Value => {
     }
 };
 
-const mapToNumbers = (args: Value[]): number[] =>
-    args.map((arg) => {
-        if (arg[0] !== "number") {
-            throw new Error(`Number is expected but got: ${displayValue(arg)}`);
-        }
-
-        return arg[1];
-    });
-
-const getCalcArithmeticOperation = (
-    name: string,
-    reducer: (acc: number, num: number) => number,
-    unitOrUniop: number | ((num: number) => number)
-): ((numbers: number[]) => number) => {
-    if (typeof unitOrUniop === "number") {
-        return (numbers) => numbers.reduce(reducer, unitOrUniop);
-    } else {
-        return (numbers) => {
-            const [first, ...rest] = numbers;
-            if (first === undefined) {
-                throw new Error(`At least one argument is expected: ${name}`);
-            }
-
-            return rest.length == 0 ? unitOrUniop(first) : rest.reduce(reducer, first);
-        };
-    }
-};
-
-const getEvalArithmeticOperation = (
-    name: string,
-    reducer: (acc: number, num: number) => number,
-    unitOrUniop: number | ((num: number) => number)
-): VBuiltInFunc => {
-    const calculator = getCalcArithmeticOperation(name, reducer, unitOrUniop);
-    const evaluator = (expr: SExpr, env: Env): VNumber => {
-        const args = evalArgs(expr, env);
-        const numbers = mapToNumbers(args);
-
-        return ["number", calculator(numbers)];
-    };
-
-    return ["built-in-func", evaluator];
-};
-
-const evalAdd = getEvalArithmeticOperation("+", (acc, num) => acc + num, 0.0);
-const evalSub = getEvalArithmeticOperation("-", (acc, num) => acc - num, (num) => -num);
-const evalMul = getEvalArithmeticOperation("*", (acc, num) => acc * num, 1.0);
-const evalDiv = getEvalArithmeticOperation("/", (acc, num) => acc / num, (num) => 1.0 / num);
 export const initialEnv = (): Env => {
     const env = new Env();
     env.set("+", evalAdd);
@@ -189,9 +144,14 @@ export const initialEnv = (): Env => {
     env.set("*", evalMul);
     env.set("/", evalDiv);
 
+    env.set("=", evalEq);
+    env.set("<", evalLt);
+    env.set("<=", evalLe);
+    env.set(">", evalGt);    
+    env.set(">=", evalGe);    
+
     return env;
 };
-
 
 const evaluate = (expr: SExpr): Value => {
     const env = initialEnv();

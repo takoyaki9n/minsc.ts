@@ -2,7 +2,7 @@ import * as readline from "readline/promises";
 import { stdin, stdout } from "process";
 import lex from "./lex";
 import parse from "./parse";
-import evaluate from "./eval";
+import evaluate, { displayValue } from "./eval";
 
 const main = async () => {
     const rl = readline.createInterface({ input: stdin, output: stdout });
@@ -19,7 +19,8 @@ const main = async () => {
             const tokens = lex(program);
             const expr = parse(tokens);
             const value = evaluate(expr);
-            console.log(value);
+            
+            console.log(displayValue(value));
         } catch (error) {
             console.error(error);
         }
