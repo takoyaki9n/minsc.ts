@@ -103,11 +103,11 @@ const evalIf = (expr: SExpr, env: Env): Value => {
     }
 
     const testValue = evalSExpression(testExpr, env);
-    if(testValue[0] !== "bool") {
+    if (testValue[0] !== "bool") {
         throw new Error(`Bool is expected but got: ${displayValue(testValue)}`);
     }
 
-    return evalSExpression(testValue[1]? thenExpr: elseExpr, env);
+    return evalSExpression(testValue[1] ? thenExpr : elseExpr, env);
 };
 
 const evalApply = (car: SExpr, cdr: SExpr, env: Env): Value => {
@@ -147,8 +147,8 @@ export const initialEnv = (): Env => {
     env.set("=", evalEq);
     env.set("<", evalLt);
     env.set("<=", evalLe);
-    env.set(">", evalGt);    
-    env.set(">=", evalGe);    
+    env.set(">", evalGt);
+    env.set(">=", evalGe);
 
     return env;
 };

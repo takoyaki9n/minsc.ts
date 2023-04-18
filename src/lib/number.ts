@@ -48,22 +48,22 @@ export const evalSub = getEvalArithmeticOperation("-", (acc, num) => acc - num, 
 export const evalMul = getEvalArithmeticOperation("*", (acc, num) => acc * num, 1.0);
 export const evalDiv = getEvalArithmeticOperation("/", (acc, num) => acc / num, (num) => 1.0 / num);
 
-const getEvalNumericComparison = (name: string, cmp: (a:number, b: number) => boolean): VBuiltInProc => {
+const getEvalNumericComparison = (name: string, cmp: (a: number, b: number) => boolean): VBuiltInProc => {
     const comparator = (args: Value[]): VBool => {
         const numbers = mapToNumbers(args);
         const [first, ...rest] = numbers;
         if (rest.length === 0) {
             throw new Error(`At least two arguments are expected: ${name}`);
         }
-    
-        return ["bool", rest.every((num) => cmp(first, num))];    
+
+        return ["bool", rest.every((num) => cmp(first, num))];
     };
 
     return ["built-in-proc", comparator];
 };
 
-export const evalEq = getEvalNumericComparison("<", (a, b) => a < b); 
-export const evalLt = getEvalNumericComparison("<", (a, b) => a < b); 
-export const evalLe = getEvalNumericComparison("<=", (a, b) => a <= b); 
-export const evalGt = getEvalNumericComparison(">", (a, b) => a > b); 
+export const evalEq = getEvalNumericComparison("<", (a, b) => a < b);
+export const evalLt = getEvalNumericComparison("<", (a, b) => a < b);
+export const evalLe = getEvalNumericComparison("<=", (a, b) => a <= b);
+export const evalGt = getEvalNumericComparison(">", (a, b) => a > b);
 export const evalGe = getEvalNumericComparison(">=", (a, b) => a >= b); 

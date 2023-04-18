@@ -19,7 +19,7 @@ const main = async () => {
             const tokens = lex(program);
             const expr = parse(tokens);
             const value = evaluate(expr);
-            
+
             console.log(displayValue(value));
         } catch (error) {
             console.error(error);
