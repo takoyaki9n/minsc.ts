@@ -1,4 +1,4 @@
-type SExpr = null | string | [SExpr, SExpr];
+export type SExpr = null | string | [SExpr, SExpr];
 
 const parseList = (tokens: string[]): SExpr => {
     const token = tokens[0];
