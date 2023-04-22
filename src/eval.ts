@@ -151,6 +151,32 @@ const evalClosure = (closure: VClosure, args: SExpr[], env: Env): Value => {
     }, ["nil"]);
 };
 
+const breakDownLet = (expr: SExpr): [string[], SExpr[], SExpr[]] => {
+    const [bindings, ...body] = expressionToList(expr);
+    const [params, args] = expressionToList(bindings).reduce<[string[], SExpr[]]>((acc, expression) => {
+        const [param, arg, ...rest] = expressionToList(expression);
+        if (rest.length > 0) {
+            throw new Error(`Malformed let ${expr}`);
+        }
+
+        if (typeof param === "string") {
+            acc[0].push(param);
+            acc[1].push(arg);
+        }
+
+        return acc;
+    },[[],[]]);
+
+    return [params, args, body];
+};
+
+const evalLet = (expr: SExpr, env: Env): Value => {
+    const [params, args, body] = breakDownLet(expr);
+    const closure: VClosure = ["closure", params, body, env];
+
+    return evalClosure(closure, args, env);
+};
+
 const evalApply = (car: SExpr, cdr: SExpr, env: Env): Value => {
     const value = evalSExpression(car, env);
     if (value[0] === "built-in-proc") {
@@ -179,6 +205,8 @@ const evalSExpression = (expr: SExpr, env: Env): Value => {
                 return evalIf(cdr, env);
             case "lambda":
                 return evalLambda(cdr, env);
+            case "let":
+                return evalLet(cdr, env);
             default:
                 return evalApply(car, cdr, env);
         }
