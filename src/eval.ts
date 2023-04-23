@@ -97,9 +97,6 @@ const expressionToList = (expr: SExpr, list: SExpr[] = []): SExpr[] => {
     return expressionToList(cdr, list);
 };
 
-const evalList = (exprs: SExpr[], env: Env): Value[] =>
-    exprs.map((expr) => evalSExpression(expr, env));
-
 const evalIf = (expr: SExpr, env: Env): Value => {
     const [testExpr, thenExpr, elseExpr, ...rest] = expressionToList(expr);
     if (rest.length > 0) {
@@ -181,7 +178,7 @@ const evalApply = (car: SExpr, cdr: SExpr, env: Env): Value => {
     const value = evalSExpression(car, env);
     if (value[0] === "built-in-proc") {
         const exprs = expressionToList(cdr);
-        const args = evalList(exprs, env);
+        const args = exprs.map((expr) => evalSExpression(expr, env));
 
         return value[1](args);
     } else if (value[0] === "closure") {
