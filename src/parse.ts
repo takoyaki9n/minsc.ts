@@ -31,7 +31,20 @@ export const displaySExpression = (expr: SExpression, isCdr = false): string => 
     return isCdr ? `${carStr}${space}${cdrStr}` : `(${carStr}${space}${cdrStr}`;
 };
 
-const parseList = (tokens: string[]): SExpression => {
+const parseCons = (car: SExpression, tokens: string[]): SExpression => {
+    const cdr = parseSExpression(tokens);
+    const token = tokens.shift();
+    switch (token) {
+        case ")":
+            return cons(car, cdr);
+        case undefined:
+            throw new Error("Unexpected EOF");
+        default:
+            throw new Error(`Unexpected token: ${token}`);
+    }
+};
+
+const parseInParen = (tokens: string[]): SExpression => {
     const token = tokens[0];
     switch (token) {
         case undefined:
@@ -41,7 +54,12 @@ const parseList = (tokens: string[]): SExpression => {
             return nil();
         default: {
             const car = parseSExpression(tokens);
-            const cdr = parseList(tokens);
+            if (tokens[0] === ".") {
+                tokens.shift();
+                return parseCons(car, tokens);
+            }
+
+            const cdr = parseInParen(tokens);
             return cons(car, cdr);
         }
     }
@@ -53,7 +71,7 @@ const parseSExpression = (tokens: string[]): SExpression => {
         case undefined:
             throw new Error("Unexpected EOF");
         case "(":
-            return parseList(tokens);
+            return parseInParen(tokens);
         case ")":
             throw new Error("Unexpected token: )");
         default:

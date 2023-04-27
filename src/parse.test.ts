@@ -50,7 +50,7 @@ describe("parse", () => {
         expect(parse(tokens)).toEqual(expected);
     });
 
-    test.skip("cons", () => {
+    test("cons", () => {
         const tokens = lex("(() . 0)");
         const expected = cons(nil(), atom(0));
         expect(parse(tokens)).toEqual(expected);
@@ -62,7 +62,7 @@ describe("parse", () => {
         expect(parse(tokens)).toEqual(expected);
     });
 
-    test.skip("incomplete list", () => {
+    test("incomplete list", () => {
         const tokens = lex("(1 2 . 3)");
         const expected = cons(atom(1), cons(atom(2), atom(3)));
         expect(parse(tokens)).toEqual(expected);
