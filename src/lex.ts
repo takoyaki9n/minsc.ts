@@ -1,3 +1,5 @@
+
+const DELIMITERS = /^[()[\]{};"'`|]/d;
 const SYNTAX_TOKENS = ["(", ")"];
 
 const WHITE_SPACE = /^\s+/;
@@ -8,10 +10,10 @@ const splitAtIndex = (str: string, i: number): [string, string] =>
 const getToken = (input: string): [string, string] => {
     const trimmed = input.trim();
 
-    for (const token of SYNTAX_TOKENS) {
-        if (trimmed.startsWith(token)) {
-            return splitAtIndex(trimmed, token.length);
-        }
+    const mtc = trimmed.match(DELIMITERS);
+    if (mtc !== null) {
+        const [token] = mtc;
+        return splitAtIndex(trimmed, token.length);
     }
 
     for (let i = 0; i < trimmed.length; i++) {
