@@ -12,23 +12,23 @@ export type SExpression = ENil | EAtom | ECons;
 export const nil = (): ENil => [NIL];
 export const atom = (value: unknown): EAtom => [ATOM, `${value}`];
 export const cons = (car: SExpression, cdr: SExpression): ECons => [CONS, [car, cdr]];
-export const list = (...exprs: SExpression[]): SExpression => 
+export const list = (...exprs: SExpression[]): SExpression =>
     exprs.reduceRight((lis, expr) => cons(expr, lis), nil());
 
 export const displaySExpression = (expr: SExpression, isCdr = false): string => {
     const [label, value] = expr;
     if (label === NIL) {
-        return isCdr ? ")": "()";
+        return isCdr ? ")" : "()";
     } else if (label === ATOM) {
-        return isCdr ? `. ${value})`: value;
+        return isCdr ? `. ${value})` : value;
     }
 
     const [car, cdr] = value;
     const carStr = displaySExpression(car);
     const cdrStr = displaySExpression(cdr, true);
-    const space = cdr[0] === NIL ? "": " ";
+    const space = cdr[0] === NIL ? "" : " ";
 
-    return isCdr ? `${carStr}${space}${cdrStr}`: `(${carStr}${space}${cdrStr}`;
+    return isCdr ? `${carStr}${space}${cdrStr}` : `(${carStr}${space}${cdrStr}`;
 };
 
 const parseList = (tokens: string[]): SExpression => {
@@ -38,11 +38,11 @@ const parseList = (tokens: string[]): SExpression => {
             throw new Error("Unclosed open paren");
         case ")":
             tokens.shift();
-            return [NIL];
+            return nil();
         default: {
             const car = parseSExpression(tokens);
             const cdr = parseList(tokens);
-            return [CONS, [car, cdr]];
+            return cons(car, cdr);
         }
     }
 };
@@ -57,7 +57,7 @@ const parseSExpression = (tokens: string[]): SExpression => {
         case ")":
             throw new Error("Unexpected token: )");
         default:
-            return [ATOM, token];
+            return atom(token);
     }
 };
 
