@@ -1,40 +1,30 @@
-
-const DELIMITERS = /^[()[\]{};"'`|]/d;
-const SYNTAX_TOKENS = ["(", ")"];
-
-const WHITE_SPACE = /^\s+/;
+const DELIMITERS = /[()[\]{};"'`|]/d;
+const WHITESPACE = /\s/;
 
 const splitAtIndex = (str: string, i: number): [string, string] =>
     [str.substring(0, i), str.substring(i)];
 
-const getToken = (input: string): [string, string] => {
-    const trimmed = input.trim();
-
-    const mtc = trimmed.match(DELIMITERS);
-    if (mtc !== null) {
-        const [token] = mtc;
-        return splitAtIndex(trimmed, token.length);
+const getNextIndex = (input: string): number => {
+    const delimiter = input.match(DELIMITERS);
+    if (delimiter?.index === 0) {
+        return delimiter[0].length;
     }
 
-    for (let i = 0; i < trimmed.length; i++) {
-        const rest = trimmed.substring(i);
-        const isEnd = WHITE_SPACE.test(rest) || SYNTAX_TOKENS.some((token) => rest.startsWith(token));
-        if (isEnd) {
-            return splitAtIndex(trimmed, i);
-        }
-    }
-
-    return [trimmed, ""];
+    return Math.min(
+        delimiter?.index ?? input.length,
+        input.match(WHITESPACE)?.index ?? input.length
+    );
 };
 
 const lex = (program: string): string[] => {
     const tokens: string[] = [];
 
-    let rest = program;
+    let rest = program.trim();
     while (rest.length > 0) {
-        const [token, next] = getToken(rest);
+        const index = getNextIndex(rest);
+        const [token, next] = splitAtIndex(rest, index);
         tokens.push(token);
-        rest = next;
+        rest = next.trimStart();
     }
 
     return tokens;
