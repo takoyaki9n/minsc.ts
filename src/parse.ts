@@ -26,25 +26,33 @@ export const displaySExpression = (expr: SExpression, isCdr = false): string => 
     const [car, cdr] = value;
     const carStr = displaySExpression(car);
     const cdrStr = displaySExpression(cdr, true);
+    const prefix = isCdr ? "" : "(";
     const space = cdr[0] === NIL ? "" : " ";
 
-    return isCdr ? `${carStr}${space}${cdrStr}` : `(${carStr}${space}${cdrStr}`;
+    return `${prefix}${carStr}${space}${cdrStr}`;
 };
 
-const parseCons = (car: SExpression, tokens: string[]): SExpression => {
-    const cdr = parseSExpression(tokens);
-    const token = tokens.shift();
+const parseCdr = (tokens: string[]): SExpression => {
+    const token = tokens[0];
     switch (token) {
-        case ")":
-            return cons(car, cdr);
         case undefined:
             throw new Error("Unexpected EOF");
-        default:
-            throw new Error(`Unexpected token: ${token}`);
+        case ".": {
+            tokens.shift();
+            const expr = parseSExpression(tokens);
+
+            const tok = tokens.shift();
+            if (tok !== ")") {
+                throw new Error(`Unexpected token: ${tok}`);
+            }
+
+            return expr;
+        } default:
+            return parseCar(tokens);
     }
 };
 
-const parseInParen = (tokens: string[]): SExpression => {
+const parseCar = (tokens: string[]): SExpression => {
     const token = tokens[0];
     switch (token) {
         case undefined:
@@ -54,12 +62,7 @@ const parseInParen = (tokens: string[]): SExpression => {
             return nil();
         default: {
             const car = parseSExpression(tokens);
-            if (tokens[0] === ".") {
-                tokens.shift();
-                return parseCons(car, tokens);
-            }
-
-            const cdr = parseInParen(tokens);
+            const cdr = parseCdr(tokens);
             return cons(car, cdr);
         }
     }
@@ -71,7 +74,7 @@ const parseSExpression = (tokens: string[]): SExpression => {
         case undefined:
             throw new Error("Unexpected EOF");
         case "(":
-            return parseInParen(tokens);
+            return parseCar(tokens);
         case ")":
             throw new Error("Unexpected token: )");
         default:
@@ -79,12 +82,17 @@ const parseSExpression = (tokens: string[]): SExpression => {
     }
 };
 
+/**
+ * S_EXPRESSION ::= "(" CAR | atom
+ * CAR          ::= ")" | S_EXPRESSION CDR
+ * CDR          ::= "." S_EXPRESSION ")" | CAR
+ */
 const parse = (tokens: string[]): SExpression => {
     const expr = parseSExpression(tokens);
     if (tokens.length == 0) {
         return expr;
     } else {
-        throw new Error("Redundant expression");
+        throw new Error(`Redundant expression: ${tokens}`);
     }
 };
 
