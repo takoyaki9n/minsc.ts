@@ -1,5 +1,5 @@
 import { describe, expect, test } from "@jest/globals";
-import parse, { SExpression, atom, cons, displaySExpression, list, nil } from "./parse";
+import parse, { SExpression, atom, cons, displaySExpression, list, nil, parseCPS } from "./parse";
 import lex from "./lex";
 
 describe("displaySExpr", () => {
@@ -41,19 +41,23 @@ describe("displaySExpr", () => {
 describe("parse", () => {
     test("nil", () => {
         const tokens = lex("()");
-        expect(parse(tokens)).toEqual(nil());
+        const expected = nil();
+        expect(parse([...tokens])).toEqual(expected);
+        expect(parseCPS([...tokens])).toEqual(expected);
     });
 
     test("atom", () => {
         const tokens = lex("x");
         const expected = atom("x");
-        expect(parse(tokens)).toEqual(expected);
+        expect(parse([...tokens])).toEqual(expected);
+        expect(parseCPS([...tokens])).toEqual(expected);
     });
 
     test("cons", () => {
         const tokens = lex("(() . 0)");
         const expected = cons(nil(), atom(0));
-        expect(parse(tokens)).toEqual(expected);
+        expect(parse([...tokens])).toEqual(expected);
+        expect(parseCPS([...tokens])).toEqual(expected);
     });
 
     test("simple list", () => {

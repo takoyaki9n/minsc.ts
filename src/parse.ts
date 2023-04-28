@@ -1,4 +1,6 @@
+import { execSync } from "child_process";
 import { Labeled } from "./labeled";
+import exp from "constants";
 
 export const NIL = Symbol("Nil");
 export const ATOM = Symbol("Atom");
@@ -98,3 +100,66 @@ const parse = (tokens: string[]): SExpression => {
 
 export default parse;
 
+type ParseResult = [string[], SExpression];
+type Callback = (parseResult: ParseResult) => ParseResult;
+
+const parseCdrCPS = (tokens: string[], callback: Callback): ParseResult => {
+    switch (tokens[0]) {
+        case undefined:
+            throw new Error("Unexpected EOF");
+        case ".": {
+            const [, ...rest] = tokens;
+            return parseSExpressionCPS(rest, ([tokens, expr]) => {
+                const [token, ...rest] = tokens;
+                if (token !== ")") {
+                    throw new Error(`Unexpected token: ${token}`);
+                }
+
+                return callback([rest, expr]);
+            });
+        }
+        default:
+            return parseCarCPS(tokens, callback);
+    }
+};
+
+const parseCarCPS = (tokens: string[], callback: Callback): ParseResult => {
+    switch (tokens[0]) {
+        case undefined:
+            throw new Error("Unclosed open paren");
+        case ")": {
+            const [, ...rest] = tokens;
+
+            return callback([rest, nil()]);
+        }
+        default: {
+            return parseSExpressionCPS(tokens, ([tokens, car]) =>
+                parseCdrCPS(tokens, ([tokens, cdr]) =>
+                    callback([tokens, cons(car, cdr)]))
+            );
+        }
+    }
+};
+
+const parseSExpressionCPS = (tokens: string[], callback: Callback): ParseResult => {
+    const [token, ...rest] = tokens;
+    switch (token) {
+        case undefined:
+            throw new Error("Unexpected EOF");
+        case "(":
+            return parseCarCPS(rest, callback);
+        case ")":
+            throw new Error("Unexpected token: )");
+        default:
+            return callback([rest, atom(token)]);
+    }
+};
+
+export const parseCPS = (tokens: string[]): SExpression => {
+    const [rest, expr] = parseSExpressionCPS(tokens, (result) => result);
+    if (rest.length !== 0) {
+        throw new Error("Redundant expression");
+    }
+
+    return expr;
+};
