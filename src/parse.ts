@@ -1,6 +1,4 @@
-import { execSync } from "child_process";
 import { Labeled } from "./labeled";
-import exp from "constants";
 
 export const NIL = Symbol("Nil");
 export const ATOM = Symbol("Atom");
@@ -100,43 +98,50 @@ const parse = (tokens: string[]): SExpression => {
 
 export default parse;
 
-type ParseResult = [string[], SExpression];
+type ParseResult = [string[], SExpression] | Continuation;
+type Continuation = (tokens: string[]) => ParseResult;
 type Callback = (parseResult: ParseResult) => ParseResult;
+
+type LeftCallback = (tokens: string[], expr: SExpression) => ParseResult;
+const leftCallback = (f: LeftCallback): Callback =>
+    (result) => (typeof result === "function") ? result : f(result[0], result[1]);
 
 const parseCdrCPS = (tokens: string[], callback: Callback): ParseResult => {
     switch (tokens[0]) {
         case undefined:
-            throw new Error("Unexpected EOF");
+            return (tokens) => parseCdrCPS(tokens, callback);
         case ".": {
             const [, ...rest] = tokens;
-            return parseSExpressionCPS(rest, ([tokens, expr]) => {
+            return parseSExpressionCPS(rest, leftCallback((tokens, cdr) => {
                 const [token, ...rest] = tokens;
                 if (token !== ")") {
                     throw new Error(`Unexpected token: ${token}`);
                 }
 
-                return callback([rest, expr]);
-            });
+                return callback([rest, cdr]);
+            }));
         }
         default:
             return parseCarCPS(tokens, callback);
     }
 };
 
+
 const parseCarCPS = (tokens: string[], callback: Callback): ParseResult => {
     switch (tokens[0]) {
         case undefined:
-            throw new Error("Unclosed open paren");
+            return (tokens) => parseCarCPS(tokens, callback);
         case ")": {
             const [, ...rest] = tokens;
 
             return callback([rest, nil()]);
         }
         default: {
-            return parseSExpressionCPS(tokens, ([tokens, car]) =>
-                parseCdrCPS(tokens, ([tokens, cdr]) =>
-                    callback([tokens, cons(car, cdr)]))
-            );
+            return parseSExpressionCPS(tokens, leftCallback((tokens, car) =>
+                parseCdrCPS(tokens, leftCallback((tokens, cdr) =>
+                    callback([tokens, cons(car, cdr)])
+                ))
+            ));
         }
     }
 };
@@ -145,7 +150,7 @@ const parseSExpressionCPS = (tokens: string[], callback: Callback): ParseResult 
     const [token, ...rest] = tokens;
     switch (token) {
         case undefined:
-            throw new Error("Unexpected EOF");
+            throw new Error("Unexpected EOF in s-expression");
         case "(":
             return parseCarCPS(rest, callback);
         case ")":
@@ -155,11 +160,12 @@ const parseSExpressionCPS = (tokens: string[], callback: Callback): ParseResult 
     }
 };
 
-export const parseCPS = (tokens: string[]): SExpression => {
-    const [rest, expr] = parseSExpressionCPS(tokens, (result) => result);
-    if (rest.length !== 0) {
-        throw new Error("Redundant expression");
-    }
+export const parseCPS = (tokens: string[]): ParseResult => {
+    return parseSExpressionCPS(tokens, leftCallback((tokens, expr) => {
+        if (tokens.length !== 0) {
+            throw new Error("Redundant expression");
+        }
 
-    return expr;
+        return [tokens, expr];
+    }));
 };
