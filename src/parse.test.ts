@@ -1,6 +1,7 @@
 import { describe, expect, test } from "@jest/globals";
-import parse, { SExpression, atom, cons, displaySExpression, list, nil, parseCPS } from "./parse";
 import lex from "./lex";
+import { SExpression, nil, atom, cons, list } from "./ast";
+import parse, { displaySExpression, parseCPS } from "./parse";
 
 describe("displaySExpr", () => {
     test("nil", () => {
