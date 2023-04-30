@@ -1,38 +1,6 @@
+import { SExpression, display as displaySExpression, toList } from "./ast";
 import { evalAdd, evalDiv, evalEq, evalGe, evalGt, evalLe, evalLt, evalMul, evalSub } from "./lib/number";
-import { SExpr } from "./parse";
-
-export type VNil = ["nil"];
-export type VSymbol = ["symbol", string];
-export type VNumber = ["number", number];
-export type VBool = ["bool", boolean];
-export type VBuiltInProc = ["built-in-proc", (args: Value[]) => Value];
-export type VClosure = ["closure", string[], SExpr[], Env];
-export type Value =
-    | VNil
-    | VSymbol
-    | VNumber
-    | VBool
-    | VBuiltInProc
-    | VClosure;
-
-export const displayValue = (value: Value): string => {
-    switch (value[0]) {
-        case "nil":
-            return "Nil";
-        case "symbol":
-            return value[1];
-        case "number":
-            return `${value[1]}`;
-        case "bool":
-            return value[1] ? "#t" : "#f";
-        case "built-in-proc":
-            return "<Built-In Procedure>";
-        case "closure":
-            return `<Closure (${value[1].join(", ")}>)`;
-        default:
-            return `Invalid value: ${value}`;
-    }
-};
+import { bool, closure, display as displayValue, nil, number, symbol, Value, VClosure } from "./value";
 
 type Frame = Record<string, Value>;
 export class Env {
@@ -53,26 +21,38 @@ export class Env {
     }
 
     public set(name: string, value: Value): void {
-        this.frame[name] = value;
+        this.frame = {
+            ...this.frame,
+            name: value,
+        };
     }
 }
 
+const expectList = (expr: SExpression): SExpression[] => {
+    const list = toList(expr);
+    if (list === null) {
+        throw new Error(`List is expected but got: ${displaySExpression(expr)}`);
+    }
+
+    return list;
+};
+
 const evalLiteral = (token: string): Value => {
-    const number = Number(token);
-    if (!isNaN(number)) {
-        return ["number", number];
+    const num = Number(token);
+    if (!isNaN(num)) {
+        return number(num);
     }
 
     if (token === "#t" || token === "#f") {
-        return ["bool", token === "#t"];
+        return bool(token === "#t");
     }
 
-    return ["symbol", token];
+    return symbol(token);
 };
 
 const evalAtom = (token: string, env: Env): Value => {
     const literalOrSymbol = evalLiteral(token);
-    if (literalOrSymbol[0] !== "symbol") {
+    if (literalOrSymbol[0] !== "Symbol") {
         return literalOrSymbol;
     }
 
@@ -84,105 +64,92 @@ const evalAtom = (token: string, env: Env): Value => {
     return value;
 };
 
-const expressionToList = (expr: SExpr, list: SExpr[] = []): SExpr[] => {
-    if (expr === null) {
-        return list;
-    } else if (typeof expr === "string") {
-        throw new Error(`Expression is imcomplete list: ${expr}`);
-    }
-
-    const [car, cdr] = expr;
-    list.push(car);
-
-    return expressionToList(cdr, list);
-};
-
-const evalIf = (expr: SExpr, env: Env): Value => {
-    const [testExpr, thenExpr, elseExpr, ...rest] = expressionToList(expr);
+const evalIf = (expr: SExpression, env: Env): Value => {
+    const [, condExpr, thenExpr, elseExpr, ...rest] = expectList(expr);
     if (rest.length > 0) {
-        throw new Error(`Malformed if: ${rest}`);
+        throw new Error(`Malformed if: ${displaySExpression(expr)}`);
     }
 
-    const testValue = evalSExpression(testExpr, env);
-    if (testValue[0] !== "bool") {
-        throw new Error(`Bool is expected but got: ${displayValue(testValue)}`);
+    const condValue = evalSExpression(condExpr, env);
+    if (condValue[0] !== "Bool") {
+        throw new Error(`Bool is expected but got: ${displayValue(condValue)}`);
     }
 
-    return evalSExpression(testValue[1] ? thenExpr : elseExpr, env);
+    return evalSExpression(condValue[1] ? thenExpr : elseExpr, env);
 };
 
-const evalLambda = (expr: SExpr, env: Env): VClosure => {
-    const [paramPart, ...body] = expressionToList(expr);
-    const params = expressionToList(paramPart).reduce<string[]>((acc, param) => {
-        if (typeof param === "string") {
-            const value = evalLiteral(param);
-            if (value[0] === "symbol") {
-                acc.push(value[1]);
+const evalLambda = (expr: SExpression, env: Env): VClosure => {
+    const [, paramPart, ...body] = expectList(expr);
+    const params = expectList(paramPart).reduce<string[]>((acc, param) => {
+        if (param[0] === "Atom") {
+            const value = evalLiteral(param[1]);
+            if (value[0] === "Symbol") {
+                return [...acc, value[1]];
             }
         }
 
         return acc;
     }, []);
 
-    return ["closure", params, body, env];
+    return closure(params, body, env);
 };
 
-const buildFrame = (params: string[], args: SExpr[], env: Env): Frame => {
+const buildFrame = (params: string[], args: SExpression[], env: Env): Frame => {
     if (params.length !== args.length) {
         throw new Error(`Invalid number of arguments: expected ${params.length} but got ${args.length}`);
     }
 
-    return params.reduce<Frame>((frame, param, i) => {
-        frame[param] = evalSExpression(args[i], env);
-        return frame;
-    }, {});
+    return params.reduce<Frame>((frame, param, i) => ({
+        ...frame,
+        [param]: evalSExpression(args[i], env)
+    }), {});
 };
 
-const evalClosure = (closure: VClosure, args: SExpr[], env: Env): Value => {
-    const [, params, body, closureEnv] = closure;
+const evalClosure = (closure: VClosure, args: SExpression[], env: Env): Value => {
+    const [params, body, closureEnv] = closure[1];
     const frame = buildFrame(params, args, env);
     const newEnv = new Env(closureEnv, frame);
 
-    return body.reduce<Value>((_, expr) => {
-        return evalSExpression(expr, newEnv);
-    }, ["nil"]);
+    return body.reduce<Value>((_, expr) => evalSExpression(expr, newEnv), nil());
 };
 
-const breakDownLet = (expr: SExpr): [string[], SExpr[], SExpr[]] => {
-    const [bindings, ...body] = expressionToList(expr);
-    const [params, args] = expressionToList(bindings).reduce<[string[], SExpr[]]>((acc, expression) => {
-        const [param, arg, ...rest] = expressionToList(expression);
+const breakDownLet = (expr: SExpression): [string[], SExpression[], SExpression[]] => {
+    const [, bindings, ...body] = expectList(expr);
+    const [params, args] = expectList(bindings).reduce<[string[], SExpression[]]>((acc, expression) => {
+        const [param, arg, ...rest] = expectList(expression);
         if (rest.length > 0) {
-            throw new Error(`Malformed let ${expr}`);
+            throw new Error(`Malformed let ${displaySExpression(expr)}`);
         }
 
         if (typeof param === "string") {
-            acc[0].push(param);
-            acc[1].push(arg);
+            return [
+                [...acc[0], param],
+                [...acc[1], arg],
+            ];
         }
 
         return acc;
-    },[[],[]]);
+    }, [[], []]);
 
     return [params, args, body];
 };
 
-const evalLet = (expr: SExpr, env: Env): Value => {
+const evalLet = (expr: SExpression, env: Env): Value => {
     const [params, args, body] = breakDownLet(expr);
-    const closure: VClosure = ["closure", params, body, env];
+    const clos: VClosure = closure(params, body, env);
 
-    return evalClosure(closure, args, env);
+    return evalClosure(clos, args, env);
 };
 
-const evalApply = (car: SExpr, cdr: SExpr, env: Env): Value => {
+const evalApply = (car: SExpression, cdr: SExpression, env: Env): Value => {
     const value = evalSExpression(car, env);
-    if (value[0] === "built-in-proc") {
-        const exprs = expressionToList(cdr);
+    if (value[0] === "Built-in-proc") {
+        const exprs = expectList(cdr);
         const args = exprs.map((expr) => evalSExpression(expr, env));
 
         return value[1](args);
-    } else if (value[0] === "closure") {
-        const args = expressionToList(cdr);
+    } else if (value[0] === "Closure") {
+        const args = expectList(cdr);
 
         return evalClosure(value, args, env);
     }
@@ -190,24 +157,26 @@ const evalApply = (car: SExpr, cdr: SExpr, env: Env): Value => {
     throw new Error(`Invalid application: ${displayValue(value)}`);
 };
 
-const evalSExpression = (expr: SExpr, env: Env): Value => {
-    if (expr === null) {
-        return ["nil"];
-    } else if (typeof expr === "string") {
-        return evalAtom(expr, env);
-    } else {
-        const [car, cdr] = expr;
-        switch (car) {
+const evalSExpression = (expr: SExpression, env: Env): Value => {
+    if (expr[0] === "Nil") {
+        return nil();
+    } else if (expr[0] === "Atom") {
+        return evalAtom(expr[1], env);
+    }
+
+    const [car, cdr] = expr[1];
+    if (car[0] === "Atom") {
+        switch (car[1]) {
             case "if":
-                return evalIf(cdr, env);
+                return evalIf(expr, env);
             case "lambda":
-                return evalLambda(cdr, env);
+                return evalLambda(expr, env);
             case "let":
-                return evalLet(cdr, env);
-            default:
-                return evalApply(car, cdr, env);
+                return evalLet(expr, env);
         }
     }
+
+    return evalApply(car, cdr, env);
 };
 
 export const initialEnv = (): Env => {
@@ -226,7 +195,7 @@ export const initialEnv = (): Env => {
     return env;
 };
 
-const evaluate = (expr: SExpr): Value => {
+const evaluate = (expr: SExpression): Value => {
     const env = initialEnv();
 
     return evalSExpression(expr, env);

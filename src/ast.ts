@@ -11,7 +11,7 @@ export const cons = (car: SExpression, cdr: SExpression): ECons => ["Cons", [car
 export const list = (...exprs: SExpression[]): SExpression =>
     exprs.reduceRight((lis, expr) => cons(expr, lis), nil());
 
-export const toArray = (expr: SExpression, arr: SExpression[] = []): SExpression[] | null => {
+export const toList = (expr: SExpression, arr: SExpression[] = []): SExpression[] | null => {
     const [tag, value] = expr;
     if (tag === "Nil") {
         return arr;
@@ -20,7 +20,7 @@ export const toArray = (expr: SExpression, arr: SExpression[] = []): SExpression
     }
 
     const [car, cdr] = value;
-    const rest = toArray(cdr);
+    const rest = toList(cdr);
 
     return rest === null ? null : [car, ...rest];
 };

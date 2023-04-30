@@ -1,9 +1,9 @@
-import { VBool, VBuiltInProc, VNumber, Value, displayValue } from "../eval";
+import { Value, VBuiltInProc, VNumber, VBool, display, number, builtInProc, bool } from "../value";
 
 const mapToNumbers = (args: Value[]): number[] =>
     args.map((arg) => {
-        if (arg[0] !== "number") {
-            throw new Error(`Number is expected but got: ${displayValue(arg)}`);
+        if (arg[0] !== "Number") {
+            throw new Error(`Number is expected but got: ${display(arg)}`);
         }
 
         return arg[1];
@@ -37,10 +37,10 @@ const getEvalArithmeticOperation = (
     const evaluator = (args: Value[]): VNumber => {
         const numbers = mapToNumbers(args);
 
-        return ["number", calculator(numbers)];
+        return number(calculator(numbers));
     };
 
-    return ["built-in-proc", evaluator];
+    return builtInProc(evaluator);
 };
 
 export const evalAdd = getEvalArithmeticOperation("+", (acc, num) => acc + num, 0.0);
@@ -56,10 +56,10 @@ const getEvalNumericComparison = (name: string, cmp: (a: number, b: number) => b
             throw new Error(`At least two arguments are expected: ${name}`);
         }
 
-        return ["bool", rest.every((num) => cmp(first, num))];
+        return bool(rest.every((num) => cmp(first, num)));
     };
 
-    return ["built-in-proc", comparator];
+    return builtInProc(comparator);
 };
 
 export const evalEq = getEvalNumericComparison("<", (a, b) => a < b);
