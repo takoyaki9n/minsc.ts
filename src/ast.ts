@@ -24,3 +24,20 @@ export const toArray = (expr: SExpression, arr: SExpression[] = []): SExpression
 
     return rest === null ? null : [car, ...rest];
 };
+
+export const display = (expr: SExpression, isCdr = false): string => {
+    const [tag, value] = expr;
+    if (tag === "Nil") {
+        return isCdr ? ")" : "()";
+    } else if (tag === "Atom") {
+        return isCdr ? `. ${value})` : value;
+    }
+
+    const [car, cdr] = value;
+    const carStr = display(car);
+    const cdrStr = display(cdr, true);
+    const prefix = isCdr ? "" : "(";
+    const space = cdr[0] === "Nil" ? "" : " ";
+
+    return `${prefix}${carStr}${space}${cdrStr}`;
+};

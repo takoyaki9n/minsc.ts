@@ -1,22 +1,5 @@
 import { SExpression, atom, cons, nil } from "./ast";
 
-export const displaySExpression = (expr: SExpression, isCdr = false): string => {
-    const [tag, value] = expr;
-    if (tag === "Nil") {
-        return isCdr ? ")" : "()";
-    } else if (tag === "Atom") {
-        return isCdr ? `. ${value})` : value;
-    }
-
-    const [car, cdr] = value;
-    const carStr = displaySExpression(car);
-    const cdrStr = displaySExpression(cdr, true);
-    const prefix = isCdr ? "" : "(";
-    const space = cdr[0] === "Nil" ? "" : " ";
-
-    return `${prefix}${carStr}${space}${cdrStr}`;
-};
-
 const parseCdr = (tokens: string[]): SExpression => {
     const token = tokens[0];
     switch (token) {
