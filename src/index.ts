@@ -2,7 +2,8 @@ import * as readline from "readline/promises";
 import { stdin, stdout } from "process";
 import lex from "./lex";
 import parse from "./parse";
-import evaluate, { displayValue } from "./eval";
+import evaluate from "./eval";
+import { display as displayValue } from "./value";
 
 const main = async () => {
     const rl = readline.createInterface({ input: stdin, output: stdout });

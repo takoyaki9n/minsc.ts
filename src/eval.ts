@@ -23,7 +23,7 @@ export class Env {
     public set(name: string, value: Value): void {
         this.frame = {
             ...this.frame,
-            name: value,
+            [name]: value,
         };
     }
 }
@@ -115,16 +115,16 @@ const evalClosure = (closure: VClosure, args: SExpression[], env: Env): Value =>
 
 const breakDownLet = (expr: SExpression): [string[], SExpression[], SExpression[]] => {
     const [, bindings, ...body] = expectList(expr);
-    const [params, args] = expectList(bindings).reduce<[string[], SExpression[]]>((acc, expression) => {
-        const [param, arg, ...rest] = expectList(expression);
+    const [params, args] = expectList(bindings).reduce<[string[], SExpression[]]>((acc, binding) => {
+        const [param, arg, ...rest] = expectList(binding);
         if (rest.length > 0) {
-            throw new Error(`Malformed let ${displaySExpression(expr)}`);
+            throw new Error(`Malformed let: ${displaySExpression(binding)}`);
         }
 
-        if (typeof param === "string") {
+        if (param[0] === "Atom") {
             return [
-                [...acc[0], param],
-                [...acc[1], arg],
+                [...acc[0], param[1]],
+                [...acc[1], arg]
             ];
         }
 
