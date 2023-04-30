@@ -1,10 +1,10 @@
-import { ATOM, NIL, SExpression, atom, cons, nil } from "./ast";
+import { SExpression, atom, cons, nil } from "./ast";
 
 export const displaySExpression = (expr: SExpression, isCdr = false): string => {
-    const [label, value] = expr;
-    if (label === NIL) {
+    const [tag, value] = expr;
+    if (tag === "Nil") {
         return isCdr ? ")" : "()";
-    } else if (label === ATOM) {
+    } else if (tag === "Atom") {
         return isCdr ? `. ${value})` : value;
     }
 
@@ -12,7 +12,7 @@ export const displaySExpression = (expr: SExpression, isCdr = false): string => 
     const carStr = displaySExpression(car);
     const cdrStr = displaySExpression(cdr, true);
     const prefix = isCdr ? "" : "(";
-    const space = cdr[0] === NIL ? "" : " ";
+    const space = cdr[0] === "Nil" ? "" : " ";
 
     return `${prefix}${carStr}${space}${cdrStr}`;
 };

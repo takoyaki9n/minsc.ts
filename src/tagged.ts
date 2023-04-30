@@ -1,3 +1,3 @@
-type Tagged<S extends symbol, T> = [S, T];
+type Tagged<S extends string, T> = [S, T];
 
 export default Tagged;
