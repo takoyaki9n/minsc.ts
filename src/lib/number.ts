@@ -51,18 +51,23 @@ export const evalDiv = getEvalArithmeticOperation("/", (acc, num) => acc / num, 
 const getEvalNumericComparison = (name: string, cmp: (a: number, b: number) => boolean): VBuiltInProc => {
     const comparator = (args: Value[]): VBool => {
         const numbers = mapToNumbers(args);
-        const [first, ...rest] = numbers;
-        if (rest.length === 0) {
+        if (numbers.length < 2) {
             throw new Error(`At least two arguments are expected: ${name}`);
         }
 
-        return bool(rest.every((num) => cmp(first, num)));
+        for (let i = 0; i < numbers.length - 1; i++) {
+            if (!cmp(numbers[i], numbers[i+1])) {
+                return bool(false);
+            }
+        }
+        
+        return bool(true);        
     };
 
     return builtInProc(comparator);
 };
 
-export const evalEq = getEvalNumericComparison("<", (a, b) => a < b);
+export const evalEq = getEvalNumericComparison("=", (a, b) => a === b);
 export const evalLt = getEvalNumericComparison("<", (a, b) => a < b);
 export const evalLe = getEvalNumericComparison("<=", (a, b) => a <= b);
 export const evalGt = getEvalNumericComparison(">", (a, b) => a > b);
