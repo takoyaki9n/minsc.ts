@@ -48,4 +48,16 @@ describe("evaluate", () => {
         const actual = evaluate(expr);
         expect(actual).toEqual(number(24));
     });
+
+    test("letrec expression", () => {
+        const program = 
+        `(letrec ((even? (lambda (n) 
+                        (if (= n 0) #t (odd? (- n 1)))))
+                  (odd? (lambda (n) 
+                        (if (= n 0) #f (even? (- n 1)))))) 
+            (even? 11))`;
+        const expr = parse(lex(program));
+        const actual = evaluate(expr);
+        expect(actual).toEqual(bool(false));
+    });
 });

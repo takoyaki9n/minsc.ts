@@ -26,6 +26,10 @@ export class Env {
             [name]: value,
         };
     }
+
+    public setFrame(frame: Frame): void {
+        this.frame = frame;
+    }
 }
 
 const expectList = (expr: SExpression): SExpression[] => {
@@ -141,6 +145,13 @@ const evalLet = (expr: SExpression, env: Env): Value => {
     return evalClosure(clos, args, env);
 };
 
+const evalLetrec = (expr: SExpression, env: Env): Value => {
+    const [params, args, body] = breakDownLet(expr);
+    const extendedEnv = new Env(env);
+    extendedEnv.setFrame(buildFrame(params, args, extendedEnv));
+    return body.reduce<Value>((_, expr) => evalSExpression(expr, extendedEnv), nil());
+};
+
 const evalApply = (car: SExpression, cdr: SExpression, env: Env): Value => {
     const value = evalSExpression(car, env);
     if (value[0] === "Built-in-proc") {
@@ -173,6 +184,8 @@ const evalSExpression = (expr: SExpression, env: Env): Value => {
                 return evalLambda(expr, env);
             case "let":
                 return evalLet(expr, env);
+            case "letrec":
+                return evalLetrec(expr, env);
         }
     }
 
