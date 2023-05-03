@@ -22,7 +22,7 @@ const expectSymbols = (expr: SExpression): string[] => {
 
         return syms;
     }, []);
-}
+};
 
 const evalLiteral = (token: string): Value => {
     const num = Number(token);
