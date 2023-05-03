@@ -3,6 +3,7 @@ import parse from "../parse";
 import lex from "../lex";
 import evaluate from "../eval";
 import { bool, number } from "../value";
+import { Env } from "../env";
 
 describe("number", () => {
     test.each([
@@ -37,8 +38,10 @@ describe("number", () => {
         ["(>= 3 2 1)", bool(true)],
         ["(>= 2 1 2)", bool(false)],
     ])("%p", (program, expected) => {
+        const env = new Env();
+        env.initialize();
         const expr = parse(lex(program));
-        const actual = evaluate(expr);
+        const actual = evaluate(expr, env);
         expect(actual).toEqual(expected);
     });
 });

@@ -1,36 +1,6 @@
 import { SExpression, display as displaySExpression, toList } from "./ast";
-import { evalAdd, evalDiv, evalEq, evalGe, evalGt, evalLe, evalLt, evalMul, evalSub } from "./lib/number";
+import { Env, Frame } from "./env";
 import { bool, closure, display as displayValue, nil, number, symbol, Value, VClosure } from "./value";
-
-type Frame = Record<string, Value>;
-export class Env {
-    private frame: Frame;
-    private outer: Env | null;
-
-    constructor(outer?: Env, frame?: Frame) {
-        this.frame = frame ?? {};
-        this.outer = outer ?? null;
-    }
-
-    public isTop(): boolean {
-        return !this.outer;
-    }
-
-    public lookup(name: string): Value | undefined {
-        return this.frame[name] ?? this.outer?.lookup(name);
-    }
-
-    public set(name: string, value: Value): void {
-        this.frame = {
-            ...this.frame,
-            [name]: value,
-        };
-    }
-
-    public setFrame(frame: Frame): void {
-        this.frame = frame;
-    }
-}
 
 const expectList = (expr: SExpression): SExpression[] => {
     const list = toList(expr);
@@ -40,6 +10,19 @@ const expectList = (expr: SExpression): SExpression[] => {
 
     return list;
 };
+
+const expectSymbols = (expr: SExpression): string[] => {
+    return expectList(expr).reduce<string[]>((syms, expr) => {
+        if (expr[0] === "Atom") {
+            const value = evalLiteral(expr[1]);
+            if (value[0] === "Symbol") {
+                return [...syms, value[1]];
+            }
+        }
+
+        return syms;
+    }, []);
+}
 
 const evalLiteral = (token: string): Value => {
     const num = Number(token);
@@ -84,16 +67,7 @@ const evalIf = (expr: SExpression, env: Env): Value => {
 
 const evalLambda = (expr: SExpression, env: Env): VClosure => {
     const [, paramPart, ...body] = expectList(expr);
-    const params = expectList(paramPart).reduce<string[]>((acc, param) => {
-        if (param[0] === "Atom") {
-            const value = evalLiteral(param[1]);
-            if (value[0] === "Symbol") {
-                return [...acc, value[1]];
-            }
-        }
-
-        return acc;
-    }, []);
+    const params = expectSymbols(paramPart);
 
     return closure(params, body, env);
 };
@@ -149,7 +123,29 @@ const evalLetrec = (expr: SExpression, env: Env): Value => {
     const [params, args, body] = breakDownLet(expr);
     const extendedEnv = new Env(env);
     extendedEnv.setFrame(buildFrame(params, args, extendedEnv));
+
     return body.reduce<Value>((_, expr) => evalSExpression(expr, extendedEnv), nil());
+};
+
+const evalDefine = (expr: SExpression, env: Env): Value => {
+    if (!env.isTop()) {
+        throw new Error("define is availabel only at top-level");
+    }
+
+    const [, name, ...body] = expectList(expr);
+    if (name[0] !== "Atom") {
+        const [funcName, ...params] = expectSymbols(name);
+        if (funcName === undefined) {
+            throw new Error(`Wrong number of arguments for define: ${expr}`);
+        }
+        const clos = closure(params, body, env);
+        env.set(funcName, clos);
+        return symbol(funcName);
+    } else {
+        const value = body.reduce<Value>((_, expr) => evalSExpression(expr, env), nil());
+        env.set(name[1], value);
+        return symbol(name[1]);
+    }
 };
 
 const evalApply = (car: SExpression, cdr: SExpression, env: Env): Value => {
@@ -186,31 +182,15 @@ const evalSExpression = (expr: SExpression, env: Env): Value => {
                 return evalLet(expr, env);
             case "letrec":
                 return evalLetrec(expr, env);
+            case "define":
+                return evalDefine(expr, env);
         }
     }
 
     return evalApply(car, cdr, env);
 };
 
-export const initialEnv = (): Env => {
-    const env = new Env();
-    env.set("+", evalAdd);
-    env.set("-", evalSub);
-    env.set("*", evalMul);
-    env.set("/", evalDiv);
-
-    env.set("=", evalEq);
-    env.set("<", evalLt);
-    env.set("<=", evalLe);
-    env.set(">", evalGt);
-    env.set(">=", evalGe);
-
-    return env;
-};
-
-const evaluate = (expr: SExpression): Value => {
-    const env = initialEnv();
-
+const evaluate = (expr: SExpression, env: Env): Value => {
     return evalSExpression(expr, env);
 };
 

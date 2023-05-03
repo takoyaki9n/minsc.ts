@@ -1,5 +1,5 @@
 import { SExpression } from "./ast";
-import { Env } from "./eval";
+import { Env } from "./env";
 import Tagged from "./tagged";
 
 export type VNil = ["Nil"];
